@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import useHttp from './hooks/use-http';
 import Tasks from './components/Tasks/Tasks';
 import NewTask from './components/NewTask/NewTask';
@@ -6,20 +6,25 @@ import NewTask from './components/NewTask/NewTask';
 function App() {
   const [tasks, setTasks] = useState([]);
 
-  const [data, isLoading, error] = useHttp(
-    'https://reactjs-http-eb2df-default-rtdb.firebaseio.com/tasks.json'
-  );
-
-  console.log('data: ', data);
-  const fetchTasks = () => {
+  // tasksObj - the way the data comes from the firebase - by task keys
+  // applyData from the hook will apply the transformation of the data once the data is fetched
+  const transformTasks = useCallback((tasksObj) => {
     const loadedTasks = [];
 
-    for (const taskKey in data) {
-      loadedTasks.push({ id: taskKey, text: data[taskKey].text });
+    for (const taskKey in tasksObj) {
+      loadedTasks.push({ id: taskKey, text: tasksObj[taskKey].text });
     }
 
     setTasks(loadedTasks);
-  };
+  }, []);
+
+  const { isLoading, error, sendRequest: fetchTasks } = useHttp(transformTasks);
+
+  useEffect(() => {
+    fetchTasks({
+      url: 'https://reactjs-http-eb2df-default-rtdb.firebaseio.com/tasks.json',
+    });
+  }, [fetchTasks]);
 
   const taskAddHandler = (task) => {
     setTasks((prevTasks) => prevTasks.concat(task));
